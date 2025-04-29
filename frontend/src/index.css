@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.animate-pulse-reverse {
+    animation: pulse-reverse 2.5s infinite;
+}
+
+@keyframes pulse-reverse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
