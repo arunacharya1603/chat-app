@@ -6,13 +6,14 @@ import connectDB from "./lib/db.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { app, server } from "./lib/socket.js";
-
+import { fileURLToPath } from "url";
 import path from "path";
 
 dotenv.config();
 
 const PORT = process.env.PORT || 5001;
-const __dirname = path.resolve();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(express.json());
 app.use(cookieParser());
