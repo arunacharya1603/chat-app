@@ -7,7 +7,6 @@ import { toast } from "react-hot-toast";
 import GoogleLoginButton from "../components/GoogleLoginButton";
 const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
-    const [showVerificationMessage, setShowVerificationMessage] = useState(false);
     const [formData, setFormData] = useState({
         email: "",
         password: "",
@@ -26,11 +25,8 @@ const LoginPage = () => {
         e.preventDefault();
         const success = validateForm();
         if (success === true) {
-            const result = await login(formData);
-            // Check if login failed due to unverified email
-            if (result?.error && result.error.includes("verify")) {
-                setShowVerificationMessage(true);
-            }
+            await login(formData);
+            // User is automatically redirected after successful login
         }
     };
 
@@ -50,22 +46,6 @@ const LoginPage = () => {
                         </div>
                     </div>
 
-                    {/* Verification Message */}
-                    {showVerificationMessage && (
-                        <div className="alert alert-warning">
-                            <AlertCircle className="h-5 w-5" />
-                            <div>
-                                <p className="font-semibold">Email not verified</p>
-                                <p className="text-sm">Please verify your email before logging in.</p>
-                                <Link 
-                                    to="/resend-verification" 
-                                    className="link link-primary text-sm mt-1 inline-block"
-                                >
-                                    Resend verification email
-                                </Link>
-                            </div>
-                        </div>
-                    )}
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-6">

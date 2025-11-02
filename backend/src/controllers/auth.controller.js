@@ -5,7 +5,7 @@ import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
 import passport from "passport";
 import { verifyGoogleToken } from "../lib/googleAuth.js";
-import { sendVerificationEmail, sendWelcomeEmail, sendPasswordResetEmail } from "../lib/email.js";
+import { sendWelcomeEmail, sendPasswordResetEmail } from "../lib/email.js";
 
 export const signup = async (req, res, next) => {
     const { email, fullName, password } = req.body;
@@ -20,57 +20,33 @@ export const signup = async (req, res, next) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Generate verification token
-        const verificationToken = crypto.randomBytes(32).toString('hex');
-        const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
         const newUser = new User({ 
             email, 
             fullName, 
             password: hashedPassword,
-            verificationToken,
-            verificationTokenExpiry
+            isVerified: true // Set to true by default - no email verification needed
         });
         
         if (newUser) {
             await newUser.save();
             
-            // Try to send verification email
-            let emailSent = false;
-            let emailError = null;
+            // Generate JWT token and log the user in immediately
+            generateToken(res, newUser._id);
             
-            try {
-                emailSent = await sendVerificationEmail(email, fullName, verificationToken);
-            } catch (error) {
-                console.error("Error sending verification email during signup:", error);
-                emailError = error.message;
-            }
-            
-            if (!emailSent) {
-                console.log("Failed to send verification email, but user was created");
-                console.log("Email error:", emailError);
-                
-                // Log the verification URL for manual sharing if needed
-                const verificationUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
-                console.log("Manual verification URL:", verificationUrl);
-            }
-            
-            // Return success even if email fails - user can request resend
-            const responseMessage = emailSent 
-                ? "User created successfully. Please check your email to verify your account."
-                : "User created successfully. We couldn't send the verification email. Please use the resend option.";
+            // Optionally send a welcome email (non-blocking)
+            sendWelcomeEmail(email, fullName).catch(error => {
+                console.log("Welcome email failed to send:", error.message);
+            });
             
             res.status(201).json({
-                message: responseMessage,
+                message: "Account created successfully!",
                 _id: newUser._id,
                 email: newUser.email,
                 fullName: newUser.fullName,
                 profilePic: newUser.profilePic,
-                isVerified: newUser.isVerified,
-                emailSent: emailSent // Include this for frontend to handle appropriately
+                isVerified: true
             });
         } else {
-            console.log("Error in sign up controller", error);
             res.status(500).json({ message: "Internal server error" });
         }
 
@@ -90,15 +66,7 @@ export const login = async (req, res, next) => {
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) return res.status(400).json({ message: "Invalid email or password" });
 
-        // Check if email is verified
-        if (!user.isVerified && !user.isGoogleUser) {
-            return res.status(403).json({ 
-                message: "Please verify your email before logging in.",
-                isVerified: false,
-                email: user.email
-            });
-        }
-
+        // No email verification check needed - proceed with login
         generateToken(res, user._id);
 
         res.status(200).json({
@@ -183,104 +151,7 @@ export const googleCallback = (req, res, next) => {
     })(req, res, next);
 };
 
-// Verify email endpoint
-export const verifyEmail = async (req, res, next) => {
-    try {
-        const { token } = req.query;
-        
-        if (!token) {
-            return res.status(400).json({ message: "Verification token is required" });
-        }
-        
-        const user = await User.findOne({
-            verificationToken: token,
-            verificationTokenExpiry: { $gt: Date.now() }
-        });
-        
-        if (!user) {
-            return res.status(400).json({ message: "Invalid or expired verification token" });
-        }
-        
-        // Update user as verified
-        user.isVerified = true;
-        user.verificationToken = undefined;
-        user.verificationTokenExpiry = undefined;
-        await user.save();
-        
-        // Send welcome email
-        await sendWelcomeEmail(user.email, user.fullName);
-        
-        // Generate token and log the user in
-        generateToken(res, user._id);
-        
-        res.status(200).json({
-            message: "Email verified successfully!",
-            _id: user._id,
-            email: user.email,
-            fullName: user.fullName,
-            profilePic: user.profilePic,
-            isVerified: user.isVerified
-        });
-    } catch (error) {
-        console.log("Error in verify email:", error);
-        res.status(500).json({ message: "Failed to verify email" });
-    }
-};
-
-// Resend verification email endpoint
-export const resendVerificationEmail = async (req, res, next) => {
-    try {
-        const { email } = req.body;
-        
-        if (!email) {
-            return res.status(400).json({ message: "Email is required" });
-        }
-        
-        const user = await User.findOne({ email });
-        
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-        
-        if (user.isVerified) {
-            return res.status(400).json({ message: "Email is already verified" });
-        }
-        
-        // Generate new verification token
-        const verificationToken = crypto.randomBytes(32).toString('hex');
-        const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-        
-        user.verificationToken = verificationToken;
-        user.verificationTokenExpiry = verificationTokenExpiry;
-        await user.save();
-        
-        console.log('Saved new verification token for user:', email);
-        
-        // Send verification email
-        const emailSent = await sendVerificationEmail(email, user.fullName, verificationToken);
-        
-        if (!emailSent) {
-            console.error('Email service failed to send verification email');
-            // In production, we might want to be less specific about the error
-            const errorMessage = process.env.NODE_ENV === 'production' 
-                ? "Failed to send verification email. Please try again later." 
-                : "Failed to send verification email. Check email service configuration.";
-            return res.status(500).json({ message: errorMessage });
-        }
-        
-        res.status(200).json({ message: "Verification email sent successfully" });
-    } catch (error) {
-        console.error("Error in resend verification email:", error);
-        console.error("Error stack:", error.stack);
-        
-        // More detailed error message for debugging
-        const errorMessage = process.env.NODE_ENV === 'production'
-            ? "Failed to resend verification email. Please try again later."
-            : `Failed to resend verification email: ${error.message}`;
-            
-        res.status(500).json({ message: errorMessage });
-    }
-};
+// Email verification endpoints removed - no longer needed
 
 // Request password reset endpoint
 export const requestPasswordReset = async (req, res, next) => {

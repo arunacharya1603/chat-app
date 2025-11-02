@@ -5,8 +5,7 @@ import SignupPage from "./pages/SignupPage"
 import LoginPage from "./pages/LoginPage"
 import SettingsPage from "./pages/SettingsPage"
 import ProfilePage from "./pages/ProfilePage"
-import EmailVerificationPage from "./pages/EmailVerificationPage"
-import ResendVerificationPage from "./pages/ResendVerificationPage"
+// Email verification pages removed - no longer needed
 import { useAuthStore } from "./store/useAuthStore"
 import { useEffect } from "react"
 import { Loader } from "lucide-react"
@@ -39,8 +38,7 @@ function App() {
         <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/"/>} />
         <Route path="/settings" element={authUser ? <SettingsPage /> : <Navigate to="/login"/>} />
         <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login"/>} />
-        <Route path="/verify-email" element={<EmailVerificationPage />} />
-        <Route path="/resend-verification" element={<ResendVerificationPage />} />
+        {/* Email verification routes removed - no longer needed */}
       </Routes>
       <Toaster />
     </div>

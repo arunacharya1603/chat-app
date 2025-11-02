@@ -8,8 +8,6 @@ import {
     googleAuth, 
     googleCallback, 
     googleLogin,
-    verifyEmail,
-    resendVerificationEmail,
     requestPasswordReset,
     resetPassword
 } from "../controllers/auth.controller.js";
@@ -47,72 +45,12 @@ router.get("/google", googleAuth);
 router.get("/google/callback", googleCallback);
 router.post("/google/login", googleLogin);
 
-// Email verification routes
-router.get("/verify-email", verifyEmail);
-router.post("/resend-verification", resendVerificationEmail);
+// Email verification routes removed - no longer needed
 
 // Password reset routes
 router.post("/request-password-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 
-// Check email configuration endpoint
-router.get("/check-email-config", (req, res) => {
-    const config = {
-        EMAIL_SERVICE: process.env.EMAIL_SERVICE || 'not set',
-        EMAIL_USER: process.env.EMAIL_USER ? 'configured' : 'not set',
-        EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD ? 'configured' : 'not set',
-        CLIENT_URL: process.env.CLIENT_URL || 'not set',
-        NODE_ENV: process.env.NODE_ENV || 'not set',
-        // Check if values are actually present (not just truthy)
-        hasEmailService: !!process.env.EMAIL_SERVICE,
-        hasEmailUser: !!process.env.EMAIL_USER,
-        hasEmailPassword: !!process.env.EMAIL_APP_PASSWORD,
-        hasClientUrl: !!process.env.CLIENT_URL
-    };
-    
-    const isConfigured = config.hasEmailUser && config.hasEmailPassword;
-    
-    res.json({ 
-        configured: isConfigured,
-        config,
-        message: isConfigured ? 'Email service is configured' : 'Email service is NOT configured - check environment variables'
-    });
-});
-
-// Test email configuration (remove in production)
-router.get("/test-email", async (req, res) => {
-    const { sendVerificationEmail } = await import("../lib/email.js");
-    // Use query parameter for recipient email, or default to sender's email
-    const testEmail = req.query.to || process.env.EMAIL_USER || "test@example.com";
-    const testToken = "test-token-123";
-    
-    console.log("=== Email Test Started ===");
-    console.log("Testing email configuration...");
-    console.log("Recipient email:", testEmail);
-    console.log("Sender email:", process.env.EMAIL_USER);
-    
-    const result = await sendVerificationEmail(testEmail, "Test User", testToken);
-    
-    if (result) {
-        console.log("=== Email Test Success ===");
-        res.json({ 
-            success: true, 
-            message: "Test email sent successfully! Check your inbox.",
-            sentTo: testEmail 
-        });
-    } else {
-        console.log("=== Email Test Failed ===");
-        res.status(500).json({ 
-            success: false, 
-            message: "Failed to send test email. Check server logs for details.",
-            hint: "Make sure EMAIL_USER and EMAIL_APP_PASSWORD are set in .env file",
-            config: {
-                EMAIL_SERVICE: process.env.EMAIL_SERVICE || "not set",
-                EMAIL_USER: process.env.EMAIL_USER ? "configured" : "not set",
-                EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD ? "configured" : "not set"
-            }
-        });
-    }
-});
+// Email configuration endpoints removed - no longer needed for verification
 
 export default router;

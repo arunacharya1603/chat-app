@@ -33,12 +33,12 @@ export const useAuthStore = create((set,get) => ({
         try {
             set({ isSigningUp: true })
             const response = await axiosInstance.post("/auth/signup", data);
-            // Don't set authUser since email verification is required
-            // set({ authUser: response.data })
-            toast.success(response.data.message || "Account created successfully! Please check your email to verify your account.")
+            // User is automatically logged in after signup
+            set({ authUser: response.data })
+            toast.success(response.data.message || "Account created successfully!")
             
-            // Don't connect socket until email is verified
-            // get().connectSocket();
+            // Connect socket immediately
+            get().connectSocket();
             
             return { success: true, data: response.data };
         } catch (error) {
@@ -68,12 +68,7 @@ export const useAuthStore = create((set,get) => ({
             set({ isLoggingIn: true }) 
             const res = await axiosInstance.post("/auth/login", data);
             
-            // Check if email is verified
-            if (res.data.isVerified === false) {
-                toast.error("Please verify your email before logging in");
-                return { success: false, error: "Please verify your email before logging in" };
-            }
-            
+            // No verification check needed - proceed with login
             set({ authUser: res.data })
             toast.success("Logged in successfully")
 
