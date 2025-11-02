@@ -7,6 +7,11 @@ const userSchema = new mongoose.Schema({
     profilePic: { type: String, default: "" },
     googleId: { type: String, unique: true, sparse: true },
     isGoogleUser: { type: Boolean, default: false },
+    isVerified: { type: Boolean, default: false },
+    verificationToken: { type: String },
+    verificationTokenExpiry: { type: Date },
+    resetPasswordToken: { type: String },
+    resetPasswordTokenExpiry: { type: Date },
 }, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
-import { Eye, EyeOff, Loader2, Mail, MessageSquare, User, Lock } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, MessageSquare, User, Lock, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AuthImagePattern from '../components/AuthImagePatter';
 import { toast } from 'react-hot-toast';
@@ -8,6 +8,8 @@ import GoogleLoginButton from '../components/GoogleLoginButton';
 
 const SignupPage = () => {
     const [showPassword, setShowPassword] = useState(false);
+    const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+    const [registeredEmail, setRegisteredEmail] = useState("");
     const [formData, setFormData] = useState({
         fullName: "",
         email: "",
@@ -29,7 +31,11 @@ const SignupPage = () => {
         e.preventDefault();
         const success = validateForm();
         if (success === true) {
-            await signup(formData);
+            const result = await signup(formData);
+            if (result?.success) {
+                setShowSuccessMessage(true);
+                setRegisteredEmail(formData.email);
+            }
         }
     }
 
@@ -49,6 +55,32 @@ const SignupPage = () => {
                         </div>
                     </div>
 
+                    {/* Success Message */}
+                    {showSuccessMessage ? (
+                        <div className="space-y-6">
+                            <div className="alert alert-success">
+                                <CheckCircle className="h-5 w-5" />
+                                <div>
+                                    <p className="font-semibold">Registration successful!</p>
+                                    <p className="text-sm mt-1">
+                                        We've sent a verification email to <span className="font-medium">{registeredEmail}</span>
+                                    </p>
+                                    <p className="text-sm mt-2">
+                                        Please check your inbox and click the verification link to activate your account.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-3">
+                                <Link to="/login" className="btn btn-primary w-full">
+                                    Go to Login
+                                </Link>
+                                <Link to="/resend-verification" className="btn btn-ghost w-full">
+                                    Didn't receive email? Resend
+                                </Link>
+                            </div>
+                        </div>
+                    ) : (
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="form-control">
                             <label className="label">
@@ -104,6 +136,7 @@ const SignupPage = () => {
                             )}
                         </button>
                     </form>
+                    )}
 
                     {/* Google Login Button */}
                     <GoogleLoginButton mode="signup" />

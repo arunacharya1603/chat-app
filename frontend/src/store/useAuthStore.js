@@ -33,13 +33,18 @@ export const useAuthStore = create((set,get) => ({
         try {
             set({ isSigningUp: true })
             const response = await axiosInstance.post("/auth/signup", data);
-            set({ authUser: response.data })
-            toast.success("Account created successfully")
-
-            get().connectSocket();
+            // Don't set authUser since email verification is required
+            // set({ authUser: response.data })
+            toast.success(response.data.message || "Account created successfully! Please check your email to verify your account.")
+            
+            // Don't connect socket until email is verified
+            // get().connectSocket();
+            
+            return { success: true, data: response.data };
         } catch (error) {
             console.log("error signing up", error)
-            toast.error(error.response.data.message)
+            toast.error(error.response?.data?.message || "Signup failed")
+            return { success: false, error: error.response?.data?.message };
         } finally {
             set({ isSigningUp: false })
         }
@@ -62,13 +67,25 @@ export const useAuthStore = create((set,get) => ({
         try {
             set({ isLoggingIn: true }) 
             const res = await axiosInstance.post("/auth/login", data);
+            
+            // Check if email is verified
+            if (res.data.isVerified === false) {
+                toast.error("Please verify your email before logging in");
+                return { success: false, error: "Please verify your email before logging in" };
+            }
+            
             set({ authUser: res.data })
             toast.success("Logged in successfully")
 
             get().connectSocket();
+            return { success: true, data: res.data };
         } catch (error) {
             console.log("error logging in", error)
-            toast.error(error.response.data.message)
+            const errorMessage = error.response?.data?.message || "Login failed";
+            toast.error(errorMessage);
+            
+            // Return error info for handling in the component
+            return { success: false, error: errorMessage };
         } finally {
             set({ isLoggingIn: false })
         }

@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import AuthImagePattern from "../components/AuthImagePatter";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare, AlertCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import GoogleLoginButton from "../components/GoogleLoginButton";
 const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
+    const [showVerificationMessage, setShowVerificationMessage] = useState(false);
     const [formData, setFormData] = useState({
         email: "",
         password: "",
@@ -25,7 +26,11 @@ const LoginPage = () => {
         e.preventDefault();
         const success = validateForm();
         if (success === true) {
-            await login(formData);
+            const result = await login(formData);
+            // Check if login failed due to unverified email
+            if (result?.error && result.error.includes("verify")) {
+                setShowVerificationMessage(true);
+            }
         }
     };
 
@@ -44,6 +49,23 @@ const LoginPage = () => {
                             <p className="text-base-content/60">Sign in to your account</p>
                         </div>
                     </div>
+
+                    {/* Verification Message */}
+                    {showVerificationMessage && (
+                        <div className="alert alert-warning">
+                            <AlertCircle className="h-5 w-5" />
+                            <div>
+                                <p className="font-semibold">Email not verified</p>
+                                <p className="text-sm">Please verify your email before logging in.</p>
+                                <Link 
+                                    to="/resend-verification" 
+                                    className="link link-primary text-sm mt-1 inline-block"
+                                >
+                                    Resend verification email
+                                </Link>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-6">
