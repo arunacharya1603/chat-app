@@ -1,6 +1,7 @@
 import express from "express"; //to use import we need to use type: module in package.json
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
+import connectionRoutes from "./routes/connection.route.js";
 import dotenv from "dotenv";
 import connectDB from "./lib/db.js";
 import cookieParser from "cookie-parser";
@@ -67,6 +68,7 @@ app.use(passport.session());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/connections", connectionRoutes);
 
 if (process.env.NODE_ENV === "production") {
     app.use(express.static(path.join(__dirname, "../../frontend/dist")));

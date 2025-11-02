@@ -1,12 +1,34 @@
 import Message from "../models/messages.model.js";
 import User from "../models/user.model.js";
+import Connection from "../models/connection.model.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import cloudinary from "../lib/cloudinary.js";
 
 export const getUsersForSidebar = async (req, res, next) => {
     try {
         const loggedInUserId = req.user._id;
-        const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
+        
+        // Get all accepted connections
+        const connections = await Connection.find({
+            $or: [
+                { requester: loggedInUserId },
+                { recipient: loggedInUserId }
+            ],
+            status: 'accepted'
+        });
+        
+        // Get IDs of connected users
+        const connectedUserIds = connections.map(conn => {
+            return conn.requester.toString() === loggedInUserId.toString() 
+                ? conn.recipient 
+                : conn.requester;
+        });
+        
+        // Return only connected users
+        const filteredUsers = await User.find({ 
+            _id: { $in: connectedUserIds }
+        }).select("-password");
+        
         res.status(200).json(filteredUsers);
     } catch (error) {
         next(error);
@@ -38,6 +60,21 @@ export const sendMessage = async (req, res, next) => {
         const { text, image } = req.body;
         const { id: receiverId } = req.params;
         const senderId = req.user._id;
+
+        // Check if users are connected
+        const connection = await Connection.findOne({
+            $or: [
+                { requester: senderId, recipient: receiverId },
+                { requester: receiverId, recipient: senderId }
+            ],
+            status: 'accepted'
+        });
+
+        if (!connection) {
+            return res.status(403).json({ 
+                message: "You can only message connected users" 
+            });
+        }
 
         let imageUrl;
         if (image) {

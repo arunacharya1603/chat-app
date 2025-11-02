@@ -5,6 +5,8 @@ import SignupPage from "./pages/SignupPage"
 import LoginPage from "./pages/LoginPage"
 import SettingsPage from "./pages/SettingsPage"
 import ProfilePage from "./pages/ProfilePage"
+import DiscoverUsersPage from "./pages/DiscoverUsersPage"
+import ConnectionRequestsPage from "./pages/ConnectionRequestsPage"
 // Email verification pages removed - no longer needed
 import { useAuthStore } from "./store/useAuthStore"
 import { useEffect } from "react"
@@ -38,6 +40,8 @@ function App() {
         <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/"/>} />
         <Route path="/settings" element={authUser ? <SettingsPage /> : <Navigate to="/login"/>} />
         <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login"/>} />
+        <Route path="/discover" element={authUser ? <DiscoverUsersPage /> : <Navigate to="/login"/>} />
+        <Route path="/connections/requests" element={authUser ? <ConnectionRequestsPage /> : <Navigate to="/login"/>} />
         {/* Redirect old verification routes to home/login */}
         <Route path="/verify-email" element={<Navigate to={authUser ? "/" : "/login"} replace />} />
         <Route path="/resend-verification" element={<Navigate to={authUser ? "/" : "/login"} replace />} />
