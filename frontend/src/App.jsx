@@ -38,7 +38,11 @@ function App() {
         <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/"/>} />
         <Route path="/settings" element={authUser ? <SettingsPage /> : <Navigate to="/login"/>} />
         <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login"/>} />
-        {/* Email verification routes removed - no longer needed */}
+        {/* Redirect old verification routes to home/login */}
+        <Route path="/verify-email" element={<Navigate to={authUser ? "/" : "/login"} replace />} />
+        <Route path="/resend-verification" element={<Navigate to={authUser ? "/" : "/login"} replace />} />
+        {/* Catch all other unknown routes */}
+        <Route path="*" element={<Navigate to={authUser ? "/" : "/login"} replace />} />
       </Routes>
       <Toaster />
     </div>
