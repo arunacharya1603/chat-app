@@ -5,7 +5,7 @@ import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
 import passport from "passport";
 import { verifyGoogleToken } from "../lib/googleAuth.js";
-import { sendWelcomeEmail, sendPasswordResetEmail } from "../lib/email.js";
+import { sendPasswordResetEmail } from "../lib/email.js";
 
 export const signup = async (req, res, next) => {
     const { email, fullName, password } = req.body;
@@ -23,8 +23,7 @@ export const signup = async (req, res, next) => {
         const newUser = new User({ 
             email, 
             fullName, 
-            password: hashedPassword,
-            isVerified: true // Set to true by default - no email verification needed
+            password: hashedPassword
         });
         
         if (newUser) {
@@ -33,18 +32,12 @@ export const signup = async (req, res, next) => {
             // Generate JWT token and log the user in immediately
             generateToken(res, newUser._id);
             
-            // Optionally send a welcome email (non-blocking)
-            sendWelcomeEmail(email, fullName).catch(error => {
-                console.log("Welcome email failed to send:", error.message);
-            });
-            
             res.status(201).json({
                 message: "Account created successfully!",
                 _id: newUser._id,
                 email: newUser.email,
                 fullName: newUser.fullName,
-                profilePic: newUser.profilePic,
-                isVerified: true
+                profilePic: newUser.profilePic
             });
         } else {
             res.status(500).json({ message: "Internal server error" });
@@ -73,8 +66,7 @@ export const login = async (req, res, next) => {
             _id: user._id,
             email: user.email,
             fullName: user.fullName,
-            profilePic: user.profilePic,
-            isVerified: user.isVerified
+            profilePic: user.profilePic
         });
 
     } catch (error) {
@@ -259,8 +251,7 @@ export const googleLogin = async (req, res, next) => {
                 fullName: payload.name,
                 profilePic: payload.picture || "",
                 password: hashedPassword,
-                isGoogleUser: true,
-                isVerified: true, // Google users are automatically verified
+                isGoogleUser: true
             });
             await user.save();
         } else if (!user.googleId) {

@@ -53,4 +53,13 @@ router.post("/reset-password", resetPassword);
 
 // Email configuration endpoints removed - no longer needed for verification
 
+// Test endpoint to verify code version
+router.get("/version-check", (req, res) => {
+    res.json({ 
+        version: "2.0-no-verification",
+        timestamp: new Date().toISOString(),
+        message: "Email verification completely removed"
+    });
+});
+
 export default router;

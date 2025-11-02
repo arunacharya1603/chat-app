@@ -15,8 +15,8 @@ const Sidebar = () => {
   }, [getUsers]);
 
   const filteredUsers = showOnlineOnly
-    ? users.filter((user) => user.isVerified && onlineUsers.includes(user._id))
-    : users.filter((user) => user.isVerified);
+    ? users.filter((user) => onlineUsers.includes(user._id))
+    : users;
 
   if (isUsersLoading) return <SidebarSkeleton />;
 
@@ -38,7 +38,7 @@ const Sidebar = () => {
             />
             <span className="text-sm">Show online only</span>
           </label>
-          <span className="text-xs text-zinc-500">({users.filter(u => u.isVerified && onlineUsers.includes(u._id)).length} online)</span>
+          <span className="text-xs text-zinc-500">({users.filter(u => onlineUsers.includes(u._id)).length} online)</span>
         </div>
       </div>
 
@@ -79,7 +79,7 @@ const Sidebar = () => {
 
         {filteredUsers.length === 0 && (
           <div className="text-center text-zinc-500 py-4">
-            {showOnlineOnly ? "No verified users online" : "No verified users available"}
+            {showOnlineOnly ? "No users online" : "No users available"}
           </div>
         )}
       </div>
