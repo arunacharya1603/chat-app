@@ -235,17 +235,31 @@ export const resendVerificationEmail = async (req, res, next) => {
         user.verificationTokenExpiry = verificationTokenExpiry;
         await user.save();
         
+        console.log('Saved new verification token for user:', email);
+        
         // Send verification email
         const emailSent = await sendVerificationEmail(email, user.fullName, verificationToken);
         
         if (!emailSent) {
-            return res.status(500).json({ message: "Failed to send verification email" });
+            console.error('Email service failed to send verification email');
+            // In production, we might want to be less specific about the error
+            const errorMessage = process.env.NODE_ENV === 'production' 
+                ? "Failed to send verification email. Please try again later." 
+                : "Failed to send verification email. Check email service configuration.";
+            return res.status(500).json({ message: errorMessage });
         }
         
         res.status(200).json({ message: "Verification email sent successfully" });
     } catch (error) {
-        console.log("Error in resend verification email:", error);
-        res.status(500).json({ message: "Failed to resend verification email" });
+        console.error("Error in resend verification email:", error);
+        console.error("Error stack:", error.stack);
+        
+        // More detailed error message for debugging
+        const errorMessage = process.env.NODE_ENV === 'production'
+            ? "Failed to resend verification email. Please try again later."
+            : `Failed to resend verification email: ${error.message}`;
+            
+        res.status(500).json({ message: errorMessage });
     }
 };
 

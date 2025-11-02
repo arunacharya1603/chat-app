@@ -6,6 +6,7 @@ dotenv.config();
 // Create a transporter for sending emails
 const createTransporter = () => {
     console.log('Creating email transporter...');
+    console.log('Environment:', process.env.NODE_ENV || 'development');
     console.log('EMAIL_SERVICE:', process.env.EMAIL_SERVICE);
     console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
     console.log('EMAIL_APP_PASSWORD:', process.env.EMAIL_APP_PASSWORD ? 'Set' : 'Not set');
@@ -13,44 +14,68 @@ const createTransporter = () => {
     // Using Gmail SMTP (you can change this to any email service)
     if (process.env.EMAIL_SERVICE === 'gmail') {
         if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
-            console.error('Email configuration missing! Please set EMAIL_USER and EMAIL_APP_PASSWORD in .env file');
-            return null;
+            const errorMsg = 'Email configuration missing! Please set EMAIL_USER and EMAIL_APP_PASSWORD environment variables';
+            console.error(errorMsg);
+            throw new Error(errorMsg);
         }
         
-        return createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_APP_PASSWORD, // Use App Password for Gmail
-            },
-        });
+        try {
+            return createTransport({
+                service: 'gmail',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_APP_PASSWORD, // Use App Password for Gmail
+                },
+                debug: process.env.NODE_ENV !== 'production', // Enable debug in non-production
+                logger: process.env.NODE_ENV !== 'production' // Enable logging in non-production
+            });
+        } catch (error) {
+            console.error('Failed to create Gmail transporter:', error);
+            throw error;
+        }
     }
     
     // Default SMTP configuration
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-        console.error('Email configuration missing! Please set EMAIL_USER and EMAIL_PASSWORD in .env file');
-        return null;
+        const errorMsg = 'Email configuration missing! Please set EMAIL_USER and EMAIL_PASSWORD environment variables';
+        console.error(errorMsg);
+        throw new Error(errorMsg);
     }
     
-    return nodemailer.createTransporter({
-        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: process.env.EMAIL_PORT || 587,
-        secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASSWORD,
-        },
-    });
+    try {
+        return createTransport({
+            host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+            port: process.env.EMAIL_PORT || 587,
+            secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASSWORD,
+            },
+            debug: process.env.NODE_ENV !== 'production',
+            logger: process.env.NODE_ENV !== 'production'
+        });
+    } catch (error) {
+        console.error('Failed to create SMTP transporter:', error);
+        throw error;
+    }
 };
 
 // Send verification email
 export const sendVerificationEmail = async (email, fullName, verificationToken) => {
+    let transporter;
     try {
         console.log('Attempting to send verification email to:', email);
-        const transporter = createTransporter();
+        
+        try {
+            transporter = createTransporter();
+        } catch (error) {
+            console.error('Failed to create email transporter:', error.message);
+            console.error('Email configuration error - check environment variables');
+            return false;
+        }
         
         if (!transporter) {
-            console.error('Failed to create email transporter. Check your email configuration.');
+            console.error('Transporter is null - email configuration is missing');
             return false;
         }
         
@@ -98,18 +123,27 @@ export const sendVerificationEmail = async (email, fullName, verificationToken) 
             `,
         };
         
-        await transporter.sendMail(mailOptions);
+        const info = await transporter.sendMail(mailOptions);
         console.log('✅ Verification email sent successfully to:', email);
+        console.log('Message ID:', info.messageId);
         return true;
     } catch (error) {
         console.error('❌ Error sending verification email:', error.message);
-        console.error('Full error details:', error);
+        console.error('Error code:', error.code);
+        console.error('Error response:', error.response);
+        console.error('Full error stack:', error.stack);
         
-        // Log specific error types
+        // Log specific error types with more detail
         if (error.code === 'EAUTH') {
-            console.error('Authentication failed. Check your email credentials.');
+            console.error('Authentication failed. Check EMAIL_USER and EMAIL_APP_PASSWORD environment variables.');
+            console.error('For Gmail, make sure you are using an App Password, not your regular password.');
         } else if (error.code === 'ECONNECTION') {
             console.error('Connection failed. Check your internet connection and firewall settings.');
+            console.error('Also verify EMAIL_HOST and EMAIL_PORT if using custom SMTP.');
+        } else if (error.code === 'ESOCKET') {
+            console.error('Socket error. The email service might be blocking the connection.');
+        } else if (error.responseCode === 535) {
+            console.error('Authentication failed (535). Your email credentials are incorrect.');
         }
         
         return false;
