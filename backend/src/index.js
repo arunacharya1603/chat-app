@@ -8,6 +8,9 @@ import cors from "cors";
 import { app, server } from "./lib/socket.js";
 import { fileURLToPath } from "url";
 import path from "path";
+import passport from "passport";
+import session from "express-session";
+import initializePassport from "./config/passport.js";
 
 dotenv.config();
 
@@ -15,12 +18,31 @@ const PORT = process.env.PORT || 5001;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Initialize Passport
+initializePassport();
+
+// Session configuration (required for passport)
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
 }));
+
+// Initialize passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);

@@ -4,6 +4,7 @@ import AuthImagePattern from "../components/AuthImagePatter";
 import { Link } from "react-router-dom";
 import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare } from "lucide-react";
 import { toast } from "react-hot-toast";
+import GoogleLoginButton from "../components/GoogleLoginButton";
 const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
@@ -88,6 +89,9 @@ const LoginPage = () => {
                             )}
                         </button>
                     </form>
+
+                    {/* Google Login Button */}
+                    <GoogleLoginButton mode="login" />
 
                     <div className="text-center">
                         <p className="text-base-content/60">

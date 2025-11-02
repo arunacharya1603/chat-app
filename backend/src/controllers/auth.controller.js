@@ -2,6 +2,8 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
+import passport from "passport";
+import { verifyGoogleToken } from "../lib/googleAuth.js";
 
 export const signup = async (req, res, next) => {
     const { email, fullName, password } = req.body;
@@ -113,3 +115,80 @@ export const checkAuth = (req, res, next) => {
         console.log("Error in check auth controller", error.message);
     }
 }
+
+// Google OAuth handlers
+export const googleAuth = passport.authenticate('google', { scope: ['profile', 'email'] });
+
+export const googleCallback = (req, res, next) => {
+    passport.authenticate('google', { session: false }, (err, user) => {
+        if (err || !user) {
+            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=auth_failed`);
+        }
+        
+        // Generate JWT token for the user
+        generateToken(res, user._id);
+        
+        // Redirect to frontend with success
+        res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/`);
+    })(req, res, next);
+};
+
+// New endpoint to handle Google login from frontend
+export const googleLogin = async (req, res, next) => {
+    try {
+        const { credential } = req.body;
+        
+        if (!credential) {
+            return res.status(400).json({ message: "Google credential is required" });
+        }
+
+        // Decode the Google JWT token
+        const ticket = await verifyGoogleToken(credential);
+        const payload = ticket.getPayload();
+        
+        // Check if user exists
+        let user = await User.findOne({ 
+            $or: [
+                { googleId: payload.sub },
+                { email: payload.email }
+            ]
+        });
+
+        if (!user) {
+            // Create new user
+            const randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+            user = new User({
+                googleId: payload.sub,
+                email: payload.email,
+                fullName: payload.name,
+                profilePic: payload.picture || "",
+                password: hashedPassword,
+                isGoogleUser: true,
+            });
+            await user.save();
+        } else if (!user.googleId) {
+            // Link Google account to existing user
+            user.googleId = payload.sub;
+            user.profilePic = user.profilePic || payload.picture || "";
+            user.isGoogleUser = true;
+            await user.save();
+        }
+
+        // Generate JWT token
+        generateToken(res, user._id);
+
+        res.status(200).json({
+            _id: user._id,
+            email: user.email,
+            fullName: user.fullName,
+            profilePic: user.profilePic,
+            isGoogleUser: user.isGoogleUser,
+        });
+    } catch (error) {
+        console.log("Error in Google login:", error);
+        res.status(500).json({ message: "Google authentication failed" });
+    }
+};

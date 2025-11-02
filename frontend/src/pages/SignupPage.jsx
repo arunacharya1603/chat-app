@@ -4,6 +4,7 @@ import { Eye, EyeOff, Loader2, Mail, MessageSquare, User, Lock } from 'lucide-re
 import { Link } from 'react-router-dom';
 import AuthImagePattern from '../components/AuthImagePatter';
 import { toast } from 'react-hot-toast';
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 const SignupPage = () => {
     const [showPassword, setShowPassword] = useState(false);
@@ -103,6 +104,9 @@ const SignupPage = () => {
                             )}
                         </button>
                     </form>
+
+                    {/* Google Login Button */}
+                    <GoogleLoginButton mode="signup" />
 
                     <div className="text-center">
                         <p className="text-base-content/60">

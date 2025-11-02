@@ -1,5 +1,5 @@
 import express from "express";
-import { signup, login, logout, updateProfile, checkAuth } from "../controllers/auth.controller.js";
+import { signup, login, logout, updateProfile, checkAuth, googleAuth, googleCallback, googleLogin } from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -28,5 +28,10 @@ router.get("/check", protectRoute, checkAuth);
 router.all("/check", (req, res) => {
     res.status(405).json({ message: "Method not allowed" });
 });
+
+// Google OAuth routes
+router.get("/google", googleAuth);
+router.get("/google/callback", googleCallback);
+router.post("/google/login", googleLogin);
 
 export default router;
