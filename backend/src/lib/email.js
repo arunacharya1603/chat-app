@@ -11,6 +11,33 @@ const createTransporter = () => {
     console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
     console.log('EMAIL_APP_PASSWORD:', process.env.EMAIL_APP_PASSWORD ? 'Set' : 'Not set');
     
+    // Using SendGrid (recommended for production)
+    if (process.env.EMAIL_SERVICE === 'sendgrid') {
+        if (!process.env.SENDGRID_API_KEY) {
+            const errorMsg = 'SendGrid configuration missing! Please set SENDGRID_API_KEY environment variable';
+            console.error(errorMsg);
+            throw new Error(errorMsg);
+        }
+        
+        try {
+            return nodemailer.createTransport({
+                host: 'smtp.sendgrid.net',
+                port: 587,
+                secure: false,
+                auth: {
+                    user: 'apikey',
+                    pass: process.env.SENDGRID_API_KEY
+                },
+                connectionTimeout: 10000,
+                greetingTimeout: 10000,
+                socketTimeout: 10000
+            });
+        } catch (error) {
+            console.error('Failed to create SendGrid transporter:', error);
+            throw error;
+        }
+    }
+    
     // Using Gmail SMTP (you can change this to any email service)
     if (process.env.EMAIL_SERVICE === 'gmail') {
         if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
@@ -20,12 +47,28 @@ const createTransporter = () => {
         }
         
         try {
+            // Use port from environment or default based on secure setting
+            const port = process.env.EMAIL_PORT ? parseInt(process.env.EMAIL_PORT) : 587;
+            const secure = process.env.EMAIL_SECURE === 'true' || port === 465;
+            
+            console.log(`Gmail config - Port: ${port}, Secure: ${secure}`);
+            
+            // Use explicit SMTP settings for better compatibility
             return nodemailer.createTransport({
-                service: 'gmail',
+                host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+                port: port,
+                secure: secure, // true for 465, false for other ports
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_APP_PASSWORD, // Use App Password for Gmail
                 },
+                tls: {
+                    rejectUnauthorized: false, // Allow self-signed certificates
+                    ciphers: 'SSLv3' // Some servers require this
+                },
+                connectionTimeout: 15000, // 15 seconds - increased timeout
+                greetingTimeout: 15000,   // 15 seconds
+                socketTimeout: 15000,      // 15 seconds
                 debug: process.env.NODE_ENV !== 'production', // Enable debug in non-production
                 logger: process.env.NODE_ENV !== 'production' // Enable logging in non-production
             });
@@ -45,12 +88,18 @@ const createTransporter = () => {
     try {
         return nodemailer.createTransport({
             host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-            port: process.env.EMAIL_PORT || 587,
+            port: parseInt(process.env.EMAIL_PORT) || 587,
             secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASSWORD,
             },
+            tls: {
+                rejectUnauthorized: false
+            },
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 10000,
             debug: process.env.NODE_ENV !== 'production',
             logger: process.env.NODE_ENV !== 'production'
         });
