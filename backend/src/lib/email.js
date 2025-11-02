@@ -1,4 +1,4 @@
-import { createTransport } from 'nodemailer';
+import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -20,7 +20,7 @@ const createTransporter = () => {
         }
         
         try {
-            return createTransport({
+            return nodemailer.createTransport({
                 service: 'gmail',
                 auth: {
                     user: process.env.EMAIL_USER,
@@ -43,7 +43,7 @@ const createTransporter = () => {
     }
     
     try {
-        return createTransport({
+        return nodemailer.createTransport({
             host: process.env.EMAIL_HOST || 'smtp.gmail.com',
             port: process.env.EMAIL_PORT || 587,
             secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports

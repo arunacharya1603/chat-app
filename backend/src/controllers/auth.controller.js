@@ -35,20 +35,39 @@ export const signup = async (req, res, next) => {
         if (newUser) {
             await newUser.save();
             
-            // Send verification email
-            const emailSent = await sendVerificationEmail(email, fullName, verificationToken);
+            // Try to send verification email
+            let emailSent = false;
+            let emailError = null;
+            
+            try {
+                emailSent = await sendVerificationEmail(email, fullName, verificationToken);
+            } catch (error) {
+                console.error("Error sending verification email during signup:", error);
+                emailError = error.message;
+            }
             
             if (!emailSent) {
                 console.log("Failed to send verification email, but user was created");
+                console.log("Email error:", emailError);
+                
+                // Log the verification URL for manual sharing if needed
+                const verificationUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
+                console.log("Manual verification URL:", verificationUrl);
             }
             
+            // Return success even if email fails - user can request resend
+            const responseMessage = emailSent 
+                ? "User created successfully. Please check your email to verify your account."
+                : "User created successfully. We couldn't send the verification email. Please use the resend option.";
+            
             res.status(201).json({
-                message: "User created successfully. Please check your email to verify your account.",
+                message: responseMessage,
                 _id: newUser._id,
                 email: newUser.email,
                 fullName: newUser.fullName,
                 profilePic: newUser.profilePic,
-                isVerified: newUser.isVerified
+                isVerified: newUser.isVerified,
+                emailSent: emailSent // Include this for frontend to handle appropriately
             });
         } else {
             console.log("Error in sign up controller", error);

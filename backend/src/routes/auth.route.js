@@ -55,6 +55,30 @@ router.post("/resend-verification", resendVerificationEmail);
 router.post("/request-password-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 
+// Check email configuration endpoint
+router.get("/check-email-config", (req, res) => {
+    const config = {
+        EMAIL_SERVICE: process.env.EMAIL_SERVICE || 'not set',
+        EMAIL_USER: process.env.EMAIL_USER ? 'configured' : 'not set',
+        EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD ? 'configured' : 'not set',
+        CLIENT_URL: process.env.CLIENT_URL || 'not set',
+        NODE_ENV: process.env.NODE_ENV || 'not set',
+        // Check if values are actually present (not just truthy)
+        hasEmailService: !!process.env.EMAIL_SERVICE,
+        hasEmailUser: !!process.env.EMAIL_USER,
+        hasEmailPassword: !!process.env.EMAIL_APP_PASSWORD,
+        hasClientUrl: !!process.env.CLIENT_URL
+    };
+    
+    const isConfigured = config.hasEmailUser && config.hasEmailPassword;
+    
+    res.json({ 
+        configured: isConfigured,
+        config,
+        message: isConfigured ? 'Email service is configured' : 'Email service is NOT configured - check environment variables'
+    });
+});
+
 // Test email configuration (remove in production)
 router.get("/test-email", async (req, res) => {
     const { sendVerificationEmail } = await import("../lib/email.js");
